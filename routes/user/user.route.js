@@ -142,7 +142,7 @@ router.post('/register', async function (req, res) {
       email_phone,
       password,
       birthday,
-    } = req.body.user;
+    } = req.body;
     const passwordHash = bcrypt.hashSync(password, 10);
     let color = new TinyColor(random().originalInput);
 
@@ -178,8 +178,7 @@ router.post('/sign-in', async function (req, res, next) {
     const { 
       email_phone,
       password
-     } = req.body.user;
-
+     } = req.body;
     const user = await userSchema.where({ email_phone }).findOne();
 
     if (Object.keys(user).length > 0) {
