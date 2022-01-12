@@ -9,20 +9,22 @@ const { random } = require('@ctrl/tinycolor');
 const userSchema = require('../../models/user/user.model');
 const refreshTokenSchema = require('../../models/refreshToken/refreshToken.model');
 
-router.get('/', async function (req, res) {
+router.post('/suggest/:page/:limit', async function (req, res) {
   try {
-    const users = await userSchema.find();
-    res.status(200).json({ users });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' })
-  }
-})
-
-router.get('/:page/:limit', async function (req, res) {
-  try {
-    const page = +req.params.page - 1 || 0;
+    const page = +req.params.page - 1 < 0 ? 0 : +req.params.page;
     const limit = +req.params.limit || 10;
-    const users = await userSchema.find().skip(page * limit).limit(limit);
+    const users = await userSchema.find()
+                                  .select(`
+                                    _id
+                                    avatar
+                                    background_image
+                                    background_color
+                                    first_name
+                                    last_name
+                                  `)
+                                  .skip(page * limit)
+                                  .limit(limit) ;
+    console.log(users);
     const count = await userSchema.countDocuments();
 
     res.status(200).json({ users, count });
@@ -132,6 +134,30 @@ router.post('/filter', async function (req, res) {
 //   }
 // })
 
+router.post('/validate', async function (req, res) {
+  try {
+    const page = +req.params.page - 1 < 0 ? 0 : +req.params.page;
+    const limit = +req.params.limit || 10;
+    const users = await userSchema.find()
+                                  .select(`
+                                    _id
+                                    avatar
+                                    background_image
+                                    background_color
+                                    first_name
+                                    last_name
+                                  `)
+                                  .skip(page * limit)
+                                  .limit(limit) ;
+
+    const count = await userSchema.countDocuments();
+
+    res.status(200).json({ users, count });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 router.post('/register', async function (req, res) {
   try {
     const { 
@@ -207,7 +233,7 @@ router.post('/sign-in', async function (req, res, next) {
           await refreshTokenModel.save();
         }
         
-        res.status(200).json({ message: 'success', token });
+        res.status(200).json({ message: 'success', token, user: userPopulate });
         return;
       }
     }

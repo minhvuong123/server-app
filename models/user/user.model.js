@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema(
     background_color: {
       type: String,
       default: ''
+    },
+    friends: {
+      type: [this.Schema],
+      default: []
     }
   },
   { 

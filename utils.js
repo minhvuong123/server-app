@@ -3,12 +3,12 @@ const jwt = require('jsonwebtoken');
 const configToken = {
   secretToken: "kiwi",
   refreshTokenSecret: "kiwi_refresh",
-  tokenLife: 60
+  tokenLife: 6000
 } 
 
 function verifyJwtToken(token, secretKey) {
   return new Promise((resolve, reject) => {
-      jwt.verify(token, secretKey, (err, decoded) => {
+      jwt.verify(token, secretKey, async (err, decoded) => {
           if (err) {
               reject(undefined)
           } 

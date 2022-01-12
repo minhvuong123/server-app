@@ -1,7 +1,6 @@
-const {
-  verifyJwtToken,
-  configToken
-} = require('../utils');
+
+const jwt = require('jsonwebtoken');
+const { configToken, verifyJwtToken } = require('../utils');
 
 function loginRequired(req, res, next) {
   if (req.user) {
@@ -12,18 +11,13 @@ function loginRequired(req, res, next) {
 }
 
 async function authorization(req, res, next) {
-  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'JWT_Kiwi') {
-    const token = req.headers.authorization.split(' ')[1]
-    try {
-      req.user = await verifyJwtToken(token, configToken.secretToken);
-    } catch (error) {
-      req.user = undefined;
-    }
-    next();
-  } else {
+  try {
+    req.user = await verifyJwtToken(req.headers.authorization, configToken.secretToken);
+  } catch (error) {
     req.user = undefined;
-    next();
   }
+
+  next();
 }
 
 module.exports = {
