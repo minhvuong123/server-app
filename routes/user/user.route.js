@@ -9,11 +9,32 @@ const { random } = require('@ctrl/tinycolor');
 const userSchema = require('../../models/user/user.model');
 const refreshTokenSchema = require('../../models/refreshToken/refreshToken.model');
 
-router.post('/suggest/:page/:limit', async function (req, res) {
+router.post('/addFriend', async function (req, res) {
   try {
-    const page = +req.params.page - 1 < 0 ? 0 : +req.params.page;
-    const limit = +req.params.limit || 10;
-    const users = await userSchema.find()
+    const { userId, friendId } = req.body;
+    const friend = await userSchema.findOne({ _id: { $eq: friendId} }).select(`
+                                                                    _id
+                                                                    first_name
+                                                                    last_name
+                                                                    avatar
+                                                                    background_image
+                                                                    email_phone
+                                                                    birthday
+                                                                    background_color
+                                                                  `);
+
+    await userSchema.updateOne( { _id: userId },  { $push: { friends: { ...friend } }} )
+
+    res.status(200).json({ status: 'success'});
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+router.post('/suggest', async function (req, res) {
+  try {
+    const { userId, limit } = req.body;
+    const users = await userSchema.find({ _id: { $ne: userId } })
                                   .select(`
                                     _id
                                     avatar
@@ -22,9 +43,8 @@ router.post('/suggest/:page/:limit', async function (req, res) {
                                     first_name
                                     last_name
                                   `)
-                                  .skip(page * limit)
-                                  .limit(limit) ;
-    console.log(users);
+                                  .limit(limit);
+
     const count = await userSchema.countDocuments();
 
     res.status(200).json({ users, count });
@@ -134,30 +154,6 @@ router.post('/filter', async function (req, res) {
 //   }
 // })
 
-router.post('/validate', async function (req, res) {
-  try {
-    const page = +req.params.page - 1 < 0 ? 0 : +req.params.page;
-    const limit = +req.params.limit || 10;
-    const users = await userSchema.find()
-                                  .select(`
-                                    _id
-                                    avatar
-                                    background_image
-                                    background_color
-                                    first_name
-                                    last_name
-                                  `)
-                                  .skip(page * limit)
-                                  .limit(limit) ;
-
-    const count = await userSchema.countDocuments();
-
-    res.status(200).json({ users, count });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' })
-  }
-})
-
 router.post('/register', async function (req, res) {
   try {
     const { 
@@ -224,16 +220,19 @@ router.post('/sign-in', async function (req, res, next) {
 
         const token = jwt.sign({...userPopulate}, configToken.secretToken, { expiresIn: configToken.tokenLife });
         const refreshTokenExist = await refreshTokenSchema.findOne({user_id: user._id});
-
+        let refreshToken = '';
+        
         if (!refreshTokenExist || Object.keys(refreshTokenExist) <= 0) {
           refreshToken = jwt.sign({...userPopulate}, configToken.refreshTokenSecret);
 
           // save refresh token into db
           const refreshTokenModel = new refreshTokenSchema({ user_id: user._id, token: refreshToken });
           await refreshTokenModel.save();
+        } else {
+          refreshToken = refreshTokenExist.token;
         }
         
-        res.status(200).json({ message: 'success', token, user: userPopulate });
+        res.status(200).json({ message: 'success', token, refreshToken, user: userPopulate });
         return;
       }
     }
