@@ -3,12 +3,11 @@ const router = express.Router();
 
 router.post('/', async function (req, res) {
   try {
-    console.log(req.user)
     if(req.user) {
       res.status(200).json({ status: 'success'});
       return;
     }
-    res.status(404).json({ status: 'fault'});
+    res.status(204).json({ status: 'fault'});
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
   }

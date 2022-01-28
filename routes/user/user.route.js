@@ -12,16 +12,17 @@ const refreshTokenSchema = require('../../models/refreshToken/refreshToken.model
 router.post('/addFriend', async function (req, res) {
   try {
     const { userId, friendId } = req.body;
-    const friend = await userSchema.findOne({ _id: { $eq: friendId} }).select(`
-                                                                    _id
-                                                                    first_name
-                                                                    last_name
-                                                                    avatar
-                                                                    background_image
-                                                                    email_phone
-                                                                    birthday
-                                                                    background_color
-                                                                  `);
+    const friend = await userSchema.findOne({ _id: { $eq: friendId} })
+                                    .select(`
+                                      _id
+                                      first_name
+                                      last_name
+                                      avatar
+                                      background_image
+                                      email_phone
+                                      birthday
+                                      background_color
+                                    `);
 
     await userSchema.updateOne( { _id: userId },  { $push: { friends: { ...friend } }} )
 
@@ -237,6 +238,38 @@ router.post('/sign-in', async function (req, res, next) {
       }
     }
     res.status(404).json({ message: 'Login fault with this user. Please check it again or contact to admin for help !' });
+    return;
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+})
+
+router.post('/refresh', async function (req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    const refreshTokenModel = await refreshTokenSchema.where({ token: refreshToken }).findOne().select(`user_id`);
+
+    if(refreshTokenModel && refreshTokenModel.user_id) {
+      const user = await userSchema.where({ _id: refreshTokenModel.user_id }).findOne();
+      const userPopulate = {
+        _id: user._id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        avatar: user.avatar,
+        background_image: user.background_image,
+        email_phone: user.email_phone,      
+        birthday: user.birthday,      
+        background_color: user.background_color,      
+        createdAt: user.createdAt
+      };
+
+      const token = jwt.sign({...userPopulate}, configToken.secretToken, { expiresIn: configToken.tokenLife });
+      res.status(200).json({ status: 'success', token, refreshToken, user: userPopulate });
+      return;
+    }
+
+    res.status(404).json({ status: 'fault' });
     return;
 
   } catch (error) {
