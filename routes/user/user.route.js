@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { rootPath, configToken } = require('../../utils');
+const { rootPath, configToken, removeAccents } = require('../../utils');
 const { TinyColor } = require('@ctrl/tinycolor');
 const { random } = require('@ctrl/tinycolor');
 const userSchema = require('../../models/user/user.model');
@@ -35,20 +35,26 @@ router.post('/addFriend', async function (req, res) {
 router.post('/suggest', async function (req, res) {
   try {
     const { userId, limit } = req.body;
-    const users = await userSchema.find({ _id: { $ne: userId } })
+    const tempFriends = [];
+    const user = await userSchema.findOne({ _id: userId }).select(`friends._id`);
+    tempFriends.push(userId);
+
+    user.friends.forEach(friend => {
+      tempFriends.push(friend._id)
+    })
+
+    const friends = await userSchema.find({ _id: { $nin: tempFriends }})
                                   .select(`
                                     _id
                                     avatar
                                     background_image
                                     background_color
+                                    user_name
                                     first_name
                                     last_name
                                   `)
                                   .limit(limit);
-
-    const count = await userSchema.countDocuments();
-
-    res.status(200).json({ users, count });
+    res.status(200).json({ friends });
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -159,7 +165,7 @@ router.post('/register', async function (req, res) {
   try {
     const { 
       first_name, 
-      last_name , 
+      last_name, 
       avatar = '', 
       background_image = '',
       email_phone,
@@ -173,11 +179,14 @@ router.post('/register', async function (req, res) {
       color = new TinyColor(random().originalInput);
     }
     
+    const user_name = `${removeAccents(first_name)}.${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}`;
+
     const user = new userSchema({ 
       first_name, 
       last_name, 
       avatar, 
       background_image, 
+      user_name,
       email_phone, 
       password: passwordHash, 
       birthday,
@@ -213,6 +222,7 @@ router.post('/sign-in', async function (req, res, next) {
           last_name: user.last_name,
           avatar: user.avatar,
           background_image: user.background_image,
+          user_name: user.user_name,
           email_phone: user.email_phone,      
           birthday: user.birthday,      
           background_color: user.background_color,      
@@ -258,6 +268,7 @@ router.post('/refresh', async function (req, res, next) {
         last_name: user.last_name,
         avatar: user.avatar,
         background_image: user.background_image,
+        user_name: user.user_name,
         email_phone: user.email_phone,      
         birthday: user.birthday,      
         background_color: user.background_color,      
