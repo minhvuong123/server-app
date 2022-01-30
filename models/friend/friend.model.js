@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 
 const friendSchema = new mongoose.Schema(
   {
-    friendId: {
-      type: String,
-      required: true
-    },
     first_name: {
       type: String,
       required: true
