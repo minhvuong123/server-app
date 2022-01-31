@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { rootPath, configToken, removeAccents } = require('../../utils');
+const { configToken, removeAccents } = require('../../utils');
 const { TinyColor } = require('@ctrl/tinycolor');
 const { random } = require('@ctrl/tinycolor');
 const userSchema = require('../../models/user/user.model');
