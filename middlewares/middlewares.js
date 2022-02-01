@@ -1,5 +1,4 @@
 
-const jwt = require('jsonwebtoken');
 const { configToken, verifyJwtToken } = require('../utils');
 
 function loginRequired(req, res, next) {

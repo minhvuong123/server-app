@@ -10,7 +10,8 @@ function verifyJwtToken(token, secretKey) {
   return new Promise((resolve, reject) => {
       jwt.verify(token, secretKey, async (err, decoded) => {
           if (err) {
-              reject(undefined)
+            console.log("Token expire or it's something wrong!")
+            reject(undefined)
           } 
           resolve(decoded);
       })

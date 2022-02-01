@@ -6,14 +6,17 @@ const postSchema = new mongoose.Schema(
   {
     post_user: {
       type: friendSchema.schema,
-      required: true,
-      default: {}
+      required: true
     },
     post_shared: {
       type: String, // [ public, private ]
       required: true
     },
-    comments: {
+    post_text: {
+      type: String,
+      require: true
+    },
+    post_comments: {
       type: [commentSchema.schema],
       required: false,
       default: []

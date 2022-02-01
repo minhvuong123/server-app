@@ -16,9 +16,11 @@ const { authorization } = require('./middlewares/middlewares');
 // routes
 const users = require('./routes/user/user.route');
 const validate = require('./routes/validate/validate.route');
+const post = require('./routes/post/post.route');
 
 app.use('/users', users);
 app.use('/validate', authorization, validate);
+app.use('/posts', authorization, post);
 
 mongoose.connect('mongodb://localhost/socialApp', { useNewUrlParser: true, useUnifiedTopology: true });
 const connect = mongoose.connection;

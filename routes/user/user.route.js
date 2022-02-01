@@ -18,6 +18,7 @@ router.post('/addFriend', async function (req, res) {
                                       last_name
                                       avatar
                                       background_image
+                                      user_name
                                       email_phone
                                       birthday
                                       background_color
