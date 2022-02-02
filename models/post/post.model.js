@@ -23,8 +23,8 @@ const postSchema = new mongoose.Schema(
       default: []
     },
     post_comments: {
-      type: [commentSchema.schema],
-      required: false,
+      type: Array,
+      required: false, // ['comment_id_1', 'comment_id_2']
       default: []
     },
   },

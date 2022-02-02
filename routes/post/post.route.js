@@ -22,6 +22,39 @@ router.post('/addPost', async function (req, res) {
   }
 })
 
+async function mappingComments(post_comment = [], comments = []) {
+  if(comments.length > 0) {
+    const responseComments = await commentSchema.find({ _id: { $in: comments }});
+
+    post_comment.comments = responseComments;
+
+    for(const comment of post_comment.comments) {
+      await mappingComments(comment, comment.comments);
+    }
+  }
+}
+
+async function mappingPostComments(posts = [], comments = []) {
+  if(comments.length > 0) {
+    const responsePostComments = await commentSchema
+                            .find({ _id: { $in: comments }})
+                            .select(`
+                              _id
+                              comment_emojis
+                              comment_text
+                              comment_user
+                              comments
+                              createdAt
+                              updatedAt
+                            `);
+    posts.post_comments = responsePostComments;
+
+    for(const post_comment of posts.post_comments) {
+      await mappingComments(post_comment, post_comment.comments);
+    }
+  }
+}
+
 router.get('/getPosts/user_id/:user_id/page/:page/limit/:limit', async function (req, res) {
   try {
     if(req.user) {
@@ -30,6 +63,11 @@ router.get('/getPosts/user_id/:user_id/page/:page/limit/:limit', async function 
       const limit = +req.params.limit || 10;
       const posts = await postSchema.find({ "post_user._id": user_id }).skip(page*limit).limit(limit);
 
+      // map post_comments from [string_id] to [commentSchema]
+      for(const post of posts) {
+        await mappingPostComments(post, post.post_comments);
+      }
+      
       res.status(200).json({ posts: posts });
       return;
     }
@@ -43,12 +81,17 @@ router.post('/comment', async function (req, res) {
   try {
     if(req.user) {
       const { _id, comment_user, comment_text, } = req.body;
-      const comment = new commentSchema({ comment_user, comment_text });
-      const result = await postSchema.updateOne( { _id },  { $push: { post_comments: comment }} );
 
-      if(Object.keys(result).length >= 3) {
-        res.status(200).json({ message: "updated", comment });
-        return;
+      const comment = new commentSchema({ comment_user, comment_text });
+      const responseComment = await comment.save();
+
+      if(Object.keys(responseComment).length > 0) {
+        const responsePost = await postSchema.updateOne( { _id },  { $push: { post_comments: comment._id }} );
+
+        if(Object.keys(responsePost).length >= 3) {
+          res.status(200).json({ message: "updated", comment });
+          return;
+        }
       }
     }
     res.status(404).json({ message: 'Contact admin to helping!' });

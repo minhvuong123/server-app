@@ -17,10 +17,12 @@ const { authorization } = require('./middlewares/middlewares');
 const users = require('./routes/user/user.route');
 const validate = require('./routes/validate/validate.route');
 const post = require('./routes/post/post.route');
+const comment = require('./routes/comment/comment.route');
 
 app.use('/users', users);
 app.use('/validate', authorization, validate);
 app.use('/posts', authorization, post);
+app.use('/comments', authorization, comment);
 
 mongoose.connect('mongodb://localhost/socialApp', { useNewUrlParser: true, useUnifiedTopology: true });
 const connect = mongoose.connection;
