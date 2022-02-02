@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const friendSchema = require('../friend/friend.model');
 const commentSchema = require('../comment/comment.model');
+const emojiSchema = require('../emoji/emoji.model');
 
 const postSchema = new mongoose.Schema(
   {
@@ -15,6 +16,11 @@ const postSchema = new mongoose.Schema(
     post_text: {
       type: String,
       require: true
+    },
+    post_emojis: {
+      type: [emojiSchema.schema],
+      required: false,
+      default: []
     },
     post_comments: {
       type: [commentSchema.schema],

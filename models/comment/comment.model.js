@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const friendSchema = require('../friend/friend.model');
+const emojiSchema = require('../emoji/emoji.model');
 
 const commentSchema = new mongoose.Schema(
   {
@@ -12,10 +13,10 @@ const commentSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    emojis: {
-      type: Array,
+    comment_emojis: {
+      type: [emojiSchema.schema],
       required: false,
-      default: [] // { user, type: [like, heart, care, haha, wow, sad, angry] }
+      default: []
     },
     comments: {
       type: Array,
