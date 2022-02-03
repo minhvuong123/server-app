@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const friendSchema = require('../friend/friend.model');
-const commentSchema = require('../comment/comment.model');
 const emojiSchema = require('../emoji/emoji.model');
 
 const postSchema = new mongoose.Schema(
