@@ -4,7 +4,7 @@ const postSchema = require('../../models/post/post.model');
 const commentSchema = require('../../models/comment/comment.model');
 const emojiSchema = require('../../models/emoji/emoji.model');
 
-router.post('/addPost', async function (req, res) {
+router.post('/add-post', async function (req, res) {
   try {
     if(req.user) {
       const { post_user, post_shared, post_text } = req.body;
@@ -13,7 +13,7 @@ router.post('/addPost', async function (req, res) {
       const result = await post.save();
 
       if (Object.keys(result).length > 0) {
-        res.status(200).json({ status: 'success' });
+        res.status(200).json({ status: 'success', post });
         return;
       }
     }
@@ -56,13 +56,20 @@ async function mappingPostComments(posts = [], comments = []) {
   }
 }
 
-router.get('/getPosts/user_id/:user_id/page/:page/limit/:limit', async function (req, res) {
+router.get('/get-posts/user_id/:user_id/page/:page/limit/:limit', async function (req, res) {
   try {
     if(req.user) {
       const user_id = req.params.user_id;
       const page = +req.params.page - 1 >= 0 ? +req.params.page - 1 : 0;
       const limit = +req.params.limit || 10;
-      const posts = await postSchema.find({ "post_user._id": user_id }).skip(page*limit).limit(limit);
+      let posts = [];
+
+      if(user_id && user_id !== "undefined") {
+        posts = await postSchema.find({ "post_user._id": user_id }).skip(page*limit).limit(limit);
+      } else {
+        console.log("asldjasdkj");
+        posts = await postSchema.find().skip(page*limit).limit(limit);
+      }
 
       // map post_comments from [string_id] to [commentSchema]
       for(const post of posts) {
@@ -78,10 +85,45 @@ router.get('/getPosts/user_id/:user_id/page/:page/limit/:limit', async function 
   }
 })
 
+async function removePostComments(comments = []) {
+  if(comments.length > 0) {
+    for(const commentId of comments) {
+      const responseComment = await commentSchema.findOne({ _id: commentId });
+      await commentSchema.deleteOne({ _id: commentId });
+
+      if(responseComment.comments.length > 0) {
+        await removePostComments(responseComment.comments);
+      }
+    }
+  }
+}
+
+router.post('/remove-post', async function (req, res) {
+  try {
+    if(req.user) {
+      const { _id } = req.body;
+      const post = await postSchema.findOne({ _id });
+      const responsePost = await postSchema.deleteOne({ _id });
+
+      if(post.post_comments.length > 0) {
+        await removePostComments(post.post_comments);
+      }
+
+      if (responsePost.deletedCount > 0) {
+        res.status(200).json({ status: 'removed' });
+        return;
+      }
+    }
+    res.status(404).json({ message: 'Information is error' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 router.post('/comment', async function (req, res) {
   try {
     if(req.user) {
-      const { _id, comment_user, comment_text, } = req.body;
+      const { _id, comment_user, comment_text } = req.body;
 
       const comment = new commentSchema({ comment_user, comment_text });
       const responseComment = await comment.save();

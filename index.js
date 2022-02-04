@@ -3,9 +3,11 @@ const app = express();
 const PORT = 4000;
 
 const cors = require('cors');
+const morgan = require('morgan');
 const mongoose = require('mongoose');
 
 app.use(cors());
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms'))
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json({limit: '100mb'}));
 app.use('/static', express.static('public'));
