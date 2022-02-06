@@ -2,29 +2,19 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { configToken, removeAccents } = require('../../utils');
+const path = require('path');
+const { rootPath, configToken, removeAccents } = require('../../utils');
 const { TinyColor } = require('@ctrl/tinycolor');
 const { random } = require('@ctrl/tinycolor');
+const { nanoid } = require('nanoid');
 const userSchema = require('../../models/user/user.model');
 const refreshTokenSchema = require('../../models/refreshToken/refreshToken.model');
 
 router.post('/addFriend', async function (req, res) {
   try {
     const { userId, friendId } = req.body;
-    const friend = await userSchema.findOne({ _id: { $eq: friendId} })
-                                    .select(`
-                                      _id
-                                      first_name
-                                      last_name
-                                      avatar
-                                      background_image
-                                      user_name
-                                      email_phone
-                                      birthday
-                                      background_color
-                                    `);
 
-    await userSchema.updateOne( { _id: userId },  { $push: { friends: { ...friend } }} )
+    await userSchema.updateOne( { _id: userId },  { $push: { friends: friendId }} )
 
     res.status(200).json({ status: 'success'});
   } catch (error) {
@@ -89,77 +79,6 @@ router.post('/filter', async function (req, res) {
     res.status(500).json({ message: 'Server error' })
   }
 })
-
-
-// router.post('/', async function (req, res) {
-//   try {
-//     const base64Data = req.body.user.user_image_base64.split(";base64,")[1];
-//     const exten = req.body.typeImage;
-//     const imageName = uuid();
-//     const saveUrl = `${path.join(rootPath, 'public/images')}\\${imageName}.${exten}`;
-//     req.body.user.image_url = base64Data ? `static/images/${imageName}.${exten}` : '';
-
-//     const { 
-//       user_email,
-//       user_phone,
-//       user_password,
-//       user_role
-//     } = req.body.user;
-
-//     if (base64Data) {
-//       require("fs").writeFile(saveUrl, base64Data, 'base64', async function (err) {
-//         if (!err) {
-//           const user = new userSchema({ user_email, user_phone, user_password, user_role });
-//           const result = await user.save();
-          
-//           res.status(200).json({  user: result });
-//         }
-//       });
-//     } else {
-//       const user = new userSchema({ user_email, user_phone, user_password, user_role });
-
-//       const result = await user.save();
-//       res.status(200).json({ user: result });
-//     }
-
-//   } catch (error) {
-//     res.status(500).json({ message: 'Server error' })
-//   }
-// })
-
-
-// router.patch('/', async function (req, res) {
-//   try {
-//     if (req.body.user.user_image_base64) {
-//       const base64Data = req.body.user.user_image_base64.split(";base64,")[1];
-//       const exten = req.body.typeImage;
-//       const imageName = uuid();
-//       const saveUrl = `${path.join(rootPath, 'public/images')}\\${imageName}.${exten}`;
-//       req.body.user.image_url = `static/images/${imageName}.${exten}`;
-
-//       delete req.body.user.user_image_base64;
-//       delete req.body.user.status;
-
-//       require("fs").writeFile(saveUrl, base64Data, 'base64', async function (err) {
-//         if (!err) {
-//           const user = await userSchema.where({ _id: req.body.user._id }).updateOne({ ...req.body.user })
-//           if (user.ok === 1) {
-//             res.status(200).json({ status: 'ok', image_url: req.body.user.image_url });
-//           }
-//         }
-//       });
-//     } else {
-//       const user = await userSchema.where({ _id: req.body.user._id }).updateOne({ ...req.body.user });
-
-//       if (user.ok === 1) {
-//         res.status(200).json({ status: 'ok',  image_url: req.body.user.image_url });
-//       }
-//     }
-
-//   } catch (error) {
-//     res.status(500).json({ status: 'Server error' });
-//   }
-// })
 
 router.post('/register', async function (req, res) {
   try {
@@ -288,19 +207,55 @@ router.post('/refresh', async function (req, res, next) {
   }
 })
 
-
-router.post('/delete', async function (req, res) {
+router.patch('/upload-avatar', async function (req, res) {
   try {
-    const _id = req.body.user._id;
-    const result = await userSchema.deleteOne({ _id });
+    const { _id, file_data, file_name } = req.body;
+    const base64Data = file_data.split(";base64,")[1];
+    const names = file_name.split('.');
+    const typeImage = names[names.length - 1];
+    const imageName = nanoid(10);
+    const saveUrl = `${path.join(rootPath, 'public/images')}\\${imageName}.${typeImage}`;
+    const imageUrl = `static/images/${imageName}.${typeImage}`;
 
-    if (result.deletedCount >= 1) {
-      res.status(200).json({ status: 'ok' });
+    require("fs").writeFile(saveUrl, base64Data, 'base64', async function (err) {
+      if (!err) {
+        const responseUser = await userSchema.updateOne({ _id }, { avatar: imageUrl });
+
+        if (responseUser.nModified >= 1) {
+          res.status(200).json({ status: 'updated', imageUrl });
+          return;
+        }
+      }
+
+      res.status(404).json({ status: 'failed' });
       return;
-    }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'server error' })
+  }
+})
 
-    res.status(404).json({ status: 'fault' });
-    return;
+router.post('/get-friends', async function (req, res) {
+  try {
+    const { _id } = req.body;
+    const friends = [];
+    const responseUser = await userSchema.findOne({ _id }).select(`friends`);
+
+    for (const friendId of responseUser.friends) {
+      const friend = await userSchema.findOne({ _id: friendId })
+                                      .select(`
+                                        _id
+                                        avatar
+                                        background_image
+                                        background_color
+                                        user_name
+                                        first_name
+                                        last_name`
+                                      )
+      friends.push(friend);
+    } 
+ 
+    res.status(200).json({ status: 'success', friends });
   } catch (error) {
     res.status(500).json({ message: 'server error' })
   }

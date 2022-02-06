@@ -67,7 +67,6 @@ router.get('/get-posts/user_id/:user_id/page/:page/limit/:limit', async function
       if(user_id && user_id !== "undefined") {
         posts = await postSchema.find({ "post_user._id": user_id }).skip(page*limit).limit(limit);
       } else {
-        console.log("asldjasdkj");
         posts = await postSchema.find().skip(page*limit).limit(limit);
       }
 
