@@ -9,6 +9,7 @@ const { random } = require('@ctrl/tinycolor');
 const { nanoid } = require('nanoid');
 const userSchema = require('../../models/user/user.model');
 const refreshTokenSchema = require('../../models/refreshToken/refreshToken.model');
+const imageSchema = require('../../models/images/images.model');
 
 router.post('/addFriend', async function (req, res) {
   try {
@@ -220,8 +221,10 @@ router.patch('/upload-avatar', async function (req, res) {
     require("fs").writeFile(saveUrl, base64Data, 'base64', async function (err) {
       if (!err) {
         const responseUser = await userSchema.updateOne({ _id }, { avatar: imageUrl });
+        const image = new imageSchema({ images_user_id: _id, images_url: imageUrl });
+        const responseImage = await image.save();
 
-        if (responseUser.nModified >= 1) {
+        if (responseUser.nModified >= 1 && Object.keys(responseImage).length > 0) {
           res.status(200).json({ status: 'updated', imageUrl });
           return;
         }
@@ -256,6 +259,27 @@ router.post('/get-friends', async function (req, res) {
     } 
  
     res.status(200).json({ status: 'success', friends });
+  } catch (error) {
+    res.status(500).json({ message: 'server error' })
+  }
+})
+
+router.post('/get-images', async function (req, res) {
+  try {
+    const { _id } = req.body;
+    const responseImages = await imageSchema.find({ images_user_id: _id })
+                                            .select(`
+                                              _id
+                                              images_user_id
+                                              images_url
+                                            `);
+
+    if(Object.keys(responseImages).length > 0) {
+      res.status(200).json({ status: 'success', images: responseImages });
+      return;
+    }
+    res.status(404).json({ status: 'failed' });
+    return;
   } catch (error) {
     res.status(500).json({ message: 'server error' })
   }
