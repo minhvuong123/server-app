@@ -1,19 +1,51 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const { rootPath } = require('../../utils');
+const { nanoid } = require('nanoid');
 const postSchema = require('../../models/post/post.model');
 const commentSchema = require('../../models/comment/comment.model');
 const emojiSchema = require('../../models/emoji/emoji.model');
+const imageSchema = require('../../models/images/images.model');
 
 router.post('/add-post', async function (req, res) {
   try {
     if(req.user) {
-      const { post_user, post_shared, post_text } = req.body;
+      const { post_user, post_shared, post_text, post_images } = req.body;
+      const images = [];
+      const imageSchemaTemp = [];
+
       const post = new postSchema({ post_user, post_shared, post_text });
+
+      if(post_images.length > 0) {
+        for await (const post_image of post_images) {
+          // init object Image
+          const { file_data, file_name } = post_image;
+          const base64Data = file_data.split(";base64,")[1];
+          const names = file_name.split('.');
+          const typeImage = names[names.length - 1];
+          const imageName = nanoid(10);
+          const saveUrl = `${path.join(rootPath, 'public/posts')}\\${imageName}.${typeImage}`;
+          const imageUrl = `static/posts/${imageName}.${typeImage}`;
+          await require("fs").writeFileSync(saveUrl, base64Data, 'base64');
+          // init object Image
+
+          const image = new imageSchema({ images_user_id: post_user._id, images_post_id: post._id, images_url: imageUrl });
+          const responseImage = await image.save();
+      
+          if (Object.keys(responseImage).length > 0) {
+            images.push(responseImage._id)
+            imageSchemaTemp.push(image);
+          }
+        }
+        post.post_images = images;
+      }
 
       const result = await post.save();
 
       if (Object.keys(result).length > 0) {
-        res.status(200).json({ status: 'success', post });
+        result.post_images = imageSchemaTemp;
+        res.status(200).json({ status: 'success', post: result });
         return;
       }
     }
@@ -23,19 +55,19 @@ router.post('/add-post', async function (req, res) {
   }
 })
 
-async function mappingComments(post_comment = [], comments = []) {
+async function mappingComments(post_comments = [], comments = []) {
   if(comments.length > 0) {
     const responseComments = await commentSchema.find({ _id: { $in: comments }});
 
-    post_comment.comments = responseComments;
+    post_comments.comments = responseComments;
 
-    for(const comment of post_comment.comments) {
+    for(const comment of post_comments.comments) {
       await mappingComments(comment, comment.comments);
     }
   }
 }
 
-async function mappingPostComments(posts = [], comments = []) {
+async function mappingPostComments(post, comments = []) {
   if(comments.length > 0) {
     const responsePostComments = await commentSchema
                             .find({ _id: { $in: comments }})
@@ -48,11 +80,18 @@ async function mappingPostComments(posts = [], comments = []) {
                               createdAt
                               updatedAt
                             `);
-    posts.post_comments = responsePostComments;
+    post.post_comments = responsePostComments;
 
-    for(const post_comment of posts.post_comments) {
+    for(const post_comment of post.post_comments) {
       await mappingComments(post_comment, post_comment.comments);
     }
+  }
+}
+
+async function mappingPostImage(post, images = []) {
+  if(images.length > 0) {
+    const responseImage = await imageSchema.find({ _id: { $in: images }});
+    post.post_images = responseImage;
   }
 }
 
@@ -64,15 +103,17 @@ router.get('/get-posts/user_id/:user_id/page/:page/limit/:limit', async function
       const limit = +req.params.limit || 10;
       let posts = [];
 
-      if(user_id && user_id !== "undefined") {
+      if(user_id && user_id !== "undefined") { // get post random for own user
         posts = await postSchema.find({ "post_user._id": user_id }).skip(page*limit).limit(limit);
-      } else {
+      } else { // get post random for everyone
         posts = await postSchema.find().skip(page*limit).limit(limit);
       }
 
       // map post_comments from [string_id] to [commentSchema]
       for(const post of posts) {
         await mappingPostComments(post, post.post_comments);
+        // map post_images from [image_id] to [imageSchema]
+        await mappingPostImage(post, post.post_images);
       }
       
       res.status(200).json({ posts: posts });

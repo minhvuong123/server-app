@@ -7,6 +7,11 @@ const imageSchema = new mongoose.Schema(
       required: true,
       default: ''
     },
+    images_post_id: {
+      type: String,
+      required: false,
+      default: ''
+    },
     images_url: {
       type: String,
       required: false,

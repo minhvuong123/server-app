@@ -21,6 +21,11 @@ const postSchema = new mongoose.Schema(
       required: false,
       default: []
     },
+    post_images: {
+      type: Array,
+      required: false, // ['image_id']
+      default: []
+    },
     post_comments: {
       type: Array,
       required: false, // ['comment_id_1', 'comment_id_2']
