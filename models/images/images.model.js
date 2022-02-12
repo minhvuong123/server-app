@@ -12,6 +12,11 @@ const imageSchema = new mongoose.Schema(
       required: false,
       default: ''
     },
+    images_message_id: {
+      type: String,
+      required: false,
+      default: ''
+    },
     images_url: {
       type: String,
       required: false,

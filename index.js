@@ -21,12 +21,14 @@ const validate = require('./routes/validate/validate.route');
 const post = require('./routes/post/post.route');
 const comment = require('./routes/comment/comment.route');
 const conversation = require('./routes/conversation/conversation.route');
+const message = require('./routes/message/message.route');
 
 app.use('/users', users);
 app.use('/validate', authorization, validate);
 app.use('/posts', authorization, post);
 app.use('/comments', authorization, comment);
 app.use('/conversations', authorization, conversation);
+app.use('/messages', authorization, message);
 
 mongoose.connect('mongodb://localhost/socialApp', { useNewUrlParser: true, useUnifiedTopology: true });
 const connect = mongoose.connection;

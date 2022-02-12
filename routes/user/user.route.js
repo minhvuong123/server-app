@@ -27,11 +27,11 @@ router.post('/suggest', async function (req, res) {
   try {
     const { userId, limit } = req.body;
     const tempFriends = [];
-    const user = await userSchema.findOne({ _id: userId }).select(`friends._id`);
+    const user = await userSchema.findOne({ _id: userId }).select(`friends`);
     tempFriends.push(userId);
-
+    
     user.friends.forEach(friend => {
-      tempFriends.push(friend._id)
+      tempFriends.push(friend)
     })
 
     const friends = await userSchema.find({ _id: { $nin: tempFriends }})
@@ -45,6 +45,7 @@ router.post('/suggest', async function (req, res) {
                                     last_name
                                   `)
                                   .limit(limit);
+    console.log("friends:" , friends)
     res.status(200).json({ friends });
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
@@ -132,6 +133,7 @@ router.post('/sign-in', async function (req, res, next) {
       password
      } = req.body;
     const user = await userSchema.where({ email_phone }).findOne();
+    console.log("user: ", user);
 
     if (Object.keys(user).length > 0) {
       const match = await bcrypt.compare(password, user.password);
@@ -172,6 +174,7 @@ router.post('/sign-in', async function (req, res, next) {
 
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+    return;
   }
 })
 
@@ -303,13 +306,7 @@ router.post('/get-images', async function (req, res) {
                                               images_user_id
                                               images_url
                                             `);
-
-    if(Object.keys(responseImages).length > 0) {
-      res.status(200).json({ status: 'success', images: responseImages });
-      return;
-    }
-    res.status(404).json({ status: 'failed' });
-    return;
+    res.status(200).json({ status: 'success', images: responseImages || [] });
   } catch (error) {
     res.status(500).json({ message: 'server error' })
   }

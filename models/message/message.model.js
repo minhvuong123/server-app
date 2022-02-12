@@ -1,6 +1,6 @@
 
 const mongoose = require("mongoose");
-const userSchema = require('../user/user.model');
+const friendSchema = require('../friend/friend.model');
 
 const MessageSchema = new mongoose.Schema(
   {
@@ -8,9 +8,19 @@ const MessageSchema = new mongoose.Schema(
       type: String,
       require: true
     },
-    sender: {
-      type: userSchema.schema,
+    senderId: {
+      type: String,
       require: true
+    },
+    sender: {
+      type: Object,
+      require: false,
+      default: {}
+    },
+    images: {
+      type: Array,
+      require: false, // [image_id]
+      default: []
     },
     text: {
       type: String,
