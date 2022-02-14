@@ -45,7 +45,6 @@ router.post('/suggest', async function (req, res) {
                                     last_name
                                   `)
                                   .limit(limit);
-    console.log("friends:" , friends)
     res.status(200).json({ friends });
   } catch (error) {
     res.status(500).json({ message: 'Server error' })

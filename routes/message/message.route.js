@@ -80,6 +80,9 @@ router.post('/send-message', async function (req, res) {
 
       if (Object.keys(responseMessage).length > 0) {
         responseMessage.images = images;
+        // map sender from string to friendSchema
+        await mappingMessageSender(responseMessage, responseMessage.senderId);
+
         res.status(200).json({ status: 'success', message: responseMessage });
         return;
       } 
